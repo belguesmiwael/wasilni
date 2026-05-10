@@ -170,8 +170,8 @@ CREATE POLICY "wallets_own" ON public.wallets FOR ALL USING (auth.uid() = user_i
 CREATE POLICY "transactions_own" ON public.transactions FOR SELECT USING (EXISTS (SELECT 1 FROM public.wallets WHERE id = wallet_id AND user_id = auth.uid()));
 CREATE POLICY "withdrawals_own" ON public.withdrawal_requests FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "ratings_read" ON public.ratings FOR SELECT USING (is_visible = true);
-CREATE POLICY "ratings_write" ON public.ratings FOR INSERT USING (auth.uid() = rater_id);
-CREATE POLICY "sos_own" ON public.sos_alerts FOR INSERT USING (auth.uid() = user_id);
+CREATE POLICY "ratings_write" ON public.ratings FOR INSERT WITH CHECK (auth.uid() = rater_id);
+CREATE POLICY "sos_own" ON public.sos_alerts FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "notifs_own" ON public.notifications FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "hubs_read" ON public.hubs FOR SELECT USING (true);
 
