@@ -1,35 +1,34 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Navigation, MapPin, Clock, Phone, Shield, AlertOctagon } from 'lucide-react'
+import { Navigation, Phone, Clock, MapPin } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
-export default function TripTracker({ tripId, bookingId, userRole }) {
-  const mapContainer = useRef(null)
+export default function TripTracker({ tripId, userRole }) {
+  const containerRef = useRef(null)
   const mapRef = useRef(null)
+  const LRef = useRef(null)
   const driverMarkerRef = useRef(null)
-  const routeLayerRef = useRef(null)
+  const watchIdRef = useRef(null)
   const [trip, setTrip] = useState(null)
   const [eta, setEta] = useState(null)
-  const [watchId, setWatchId] = useState(null)
 
   useEffect(() => {
-    loadTrip()
     initMap()
-    const channel = supabase.channel(`trip-track-${tripId}`)
+    loadTrip()
+
+    const ch = supabase.channel(`tracker-${tripId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'trips', filter: `id=eq.${tripId}` },
         payload => {
-          const { current_lat, current_lng } = payload.new
-          if (current_lat && current_lng) updateDriverPosition(current_lat, current_lng)
+          if (payload.new.current_lat) updateDriverMarker(payload.new.current_lat, payload.new.current_lng)
           setTrip(prev => ({ ...prev, ...payload.new }))
         })
       .subscribe()
 
-    // If driver role, start sending location
-    if (userRole === 'driver') startSendingLocation()
+    if (userRole === 'driver') startGPS()
 
     return () => {
-      supabase.removeChannel(channel)
-      if (watchId) navigator.geolocation.clearWatch(watchId)
+      supabase.removeChannel(ch)
+      if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current)
       if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
     }
   }, [tripId])
@@ -39,137 +38,106 @@ export default function TripTracker({ tripId, bookingId, userRole }) {
       .select('*, user_profiles!driver_id(full_name, phone, rating, is_driver_verified)')
       .eq('id', tripId).single()
     setTrip(data)
-    if (data?.current_lat && mapRef.current) {
-      updateDriverPosition(data.current_lat, data.current_lng)
+    if (data?.current_lat && mapRef.current && LRef.current) {
+      updateDriverMarker(data.current_lat, data.current_lng)
     }
   }
 
   async function initMap() {
-    if (mapRef.current || !mapContainer.current) return
-    const mapboxgl = (await import('mapbox-gl')).default
-    await import('mapbox-gl/dist/mapbox-gl.css')
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+    if (mapRef.current || !containerRef.current) return
+    const L = (await import('leaflet')).default
+    LRef.current = L
+    delete L.Icon.Default.prototype._getIconUrl
 
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [9.5375, 33.8869],
-      zoom: 7,
-    })
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'
+      document.head.appendChild(link)
+    }
 
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
-    map.addControl(new mapboxgl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), 'top-right')
+    const map = L.map(containerRef.current, { center: [33.8869, 9.5375], zoom: 7 })
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
+    }).addTo(map)
+    mapRef.current = map
 
-    map.on('load', async () => {
-      mapRef.current = map
-      const { data: trip } = await supabase.from('trips').select('*').eq('id', tripId).single()
-      if (!trip) return
+    // Load trip points
+    const { data: t } = await supabase.from('trips').select('*').eq('id', tripId).single()
+    if (!t) return
 
-      // Draw from → to markers
-      if (trip.from_lat && trip.from_lng) {
-        const el = document.createElement('div')
-        el.style.cssText = 'width:24px;height:24px;background:#10B981;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);'
-        new mapboxgl.Marker({ element: el }).setLngLat([trip.from_lng, trip.from_lat])
-          .setPopup(new mapboxgl.Popup({ offset: 10 }).setHTML(`<div style="color:#000;font-weight:700;font-size:13px">📍 Départ<br>${trip.from_city} — ${trip.from_hub || ''}</div>`))
-          .addTo(map)
-      }
-      if (trip.to_lat && trip.to_lng) {
-        const el = document.createElement('div')
-        el.style.cssText = 'width:24px;height:24px;background:#EF4444;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);'
-        new mapboxgl.Marker({ element: el }).setLngLat([trip.to_lng, trip.to_lat])
-          .setPopup(new mapboxgl.Popup({ offset: 10 }).setHTML(`<div style="color:#000;font-weight:700;font-size:13px">🏁 Arrivée<br>${trip.to_city} — ${trip.to_hub || ''}</div>`))
-          .addTo(map)
-      }
+    if (t.from_lat) {
+      const fromIcon = L.divIcon({ html: `<div style="width:20px;height:20px;background:#10B981;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`, className: '', iconSize: [20, 20], iconAnchor: [10, 10] })
+      L.marker([t.from_lat, t.from_lng], { icon: fromIcon }).addTo(map)
+        .bindPopup(`<b>📍 Départ</b><br>${t.from_city}${t.from_hub ? ' — ' + t.from_hub : ''}`)
+    }
+    if (t.to_lat) {
+      const toIcon = L.divIcon({ html: `<div style="width:20px;height:20px;background:#EF4444;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`, className: '', iconSize: [20, 20], iconAnchor: [10, 10] })
+      L.marker([t.to_lat, t.to_lng], { icon: toIcon }).addTo(map)
+        .bindPopup(`<b>🏁 Arrivée</b><br>${t.to_city}${t.to_hub ? ' — ' + t.to_hub : ''}`)
+    }
+    if (t.from_lat && t.to_lat) {
+      L.polyline([[t.from_lat, t.from_lng], [t.to_lat, t.to_lng]], { color: '#00C9B1', weight: 3, opacity: 0.6, dashArray: '8, 8' }).addTo(map)
+      map.fitBounds([[t.from_lat, t.from_lng], [t.to_lat, t.to_lng]], { padding: [60, 60] })
+    }
 
-      // Route line
-      if (trip.from_lat && trip.to_lat) {
-        map.addSource('route', {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [[trip.from_lng, trip.from_lat], [trip.to_lng, trip.to_lat]] } }
-        })
-        map.addLayer({ id: 'route', type: 'line', source: 'route', paint: { 'line-color': '#00C9B1', 'line-width': 3, 'line-opacity': 0.7, 'line-dasharray': [0, 2] } })
-        routeLayerRef.current = true
-        map.fitBounds([[trip.from_lng, trip.from_lat], [trip.to_lng, trip.to_lat]], { padding: 80 })
-      }
-
-      if (trip.current_lat && trip.current_lng) updateDriverPosition(trip.current_lat, trip.current_lng)
-    })
+    if (t.current_lat) updateDriverMarker(t.current_lat, t.current_lng)
   }
 
-  async function updateDriverPosition(lat, lng) {
-    if (!mapRef.current) return
-    const mapboxgl = (await import('mapbox-gl')).default
-
-    if (driverMarkerRef.current) {
-      driverMarkerRef.current.setLngLat([lng, lat])
-    } else {
-      const el = document.createElement('div')
-      el.style.cssText = 'width:40px;height:40px;background:#00C9B1;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 16px rgba(0,201,177,0.5);animation:ping 2s ease-in-out infinite;'
-      el.innerHTML = '🚗'
-      driverMarkerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapRef.current)
-    }
-    mapRef.current.panTo([lng, lat], { duration: 1000 })
-
-    // Calculate ETA (rough estimate based on Tunisia avg speed ~80km/h)
-    const { data: tripData } = await supabase.from('trips').select('to_lat, to_lng').eq('id', tripId).single()
-    if (tripData?.to_lat) {
-      const R = 6371
-      const dLat = (tripData.to_lat - lat) * Math.PI / 180
-      const dLon = (tripData.to_lng - lng) * Math.PI / 180
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat * Math.PI / 180) * Math.cos(tripData.to_lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2
-      const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-      const etaMin = Math.round(dist / 80 * 60)
-      setEta(etaMin)
+  function updateDriverMarker(lat, lng) {
+    const L = LRef.current; const map = mapRef.current
+    if (!L || !map) return
+    const icon = L.divIcon({
+      html: `<div style="width:42px;height:42px;background:#00C9B1;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(0,201,177,0.6);">🚗</div>`,
+      className: '', iconSize: [42, 42], iconAnchor: [21, 21]
+    })
+    if (driverMarkerRef.current) { driverMarkerRef.current.setLatLng([lat, lng]) }
+    else { driverMarkerRef.current = L.marker([lat, lng], { icon }).addTo(map).bindPopup('<b>Conducteur</b>') }
+    map.panTo([lat, lng], { animate: true, duration: 1 })
+    // ETA calc
+    if (trip?.to_lat) {
+      const d = Math.sqrt((lat - trip.to_lat) ** 2 + (lng - trip.to_lng) ** 2) * 111
+      setEta(Math.round(d / 80 * 60))
     }
   }
 
-  function startSendingLocation() {
+  function startGPS() {
     const id = navigator.geolocation.watchPosition(
-      async (pos) => {
+      async pos => {
         const { latitude: lat, longitude: lng } = pos.coords
         await supabase.from('trips').update({ current_lat: lat, current_lng: lng, last_location_update: new Date().toISOString() }).eq('id', tripId)
       },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
+      () => {}, { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 }
     )
-    setWatchId(id)
+    watchIdRef.current = id
   }
 
   const driver = trip?.user_profiles
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Info bar */}
-      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700 }}>{trip?.from_city} → {trip?.to_city}</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>{driver?.full_name} {driver?.is_driver_verified && '✓'}</div>
-          </div>
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{trip?.from_city} → {trip?.to_city}</span>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{driver?.full_name}</span>
           {eta !== null && (
-            <div style={{ background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', borderRadius: 100, padding: '4px 12px', fontSize: 12, color: 'var(--teal)', fontWeight: 700, display: 'flex', gap: 5, alignItems: 'center' }}>
-              <Clock size={12} />ETA : ~{eta} min
-            </div>
+            <span style={{ background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', borderRadius: 100, padding: '3px 10px', fontSize: 12, color: 'var(--teal)', fontWeight: 700 }}>
+              <Clock size={11} style={{ display: 'inline', marginRight: 4 }} />~{eta} min
+            </span>
           )}
-          {trip?.status === 'departed' || trip?.status === 'checked_in' ? (
-            <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 100, padding: '4px 12px', fontSize: 11, color: '#10B981', fontWeight: 700 }}>
-              🟢 En route
-            </div>
-          ) : (
-            <div style={{ background: 'var(--gold-dim)', border: '1px solid var(--gold-border)', borderRadius: 100, padding: '4px 12px', fontSize: 11, color: 'var(--gold)', fontWeight: 700 }}>
-              🟡 En attente de départ
-            </div>
+          {userRole === 'driver' && (
+            <span style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 100, padding: '3px 10px', fontSize: 11, color: '#10B981', fontWeight: 700 }}>
+              🔴 GPS actif — position partagée
+            </span>
           )}
         </div>
         {driver?.phone && userRole !== 'driver' && (
           <a href={`tel:${driver.phone}`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none', gap: 6 }}>
-            <Phone size={13} />Appeler conducteur
+            <Phone size={13} />Appeler
           </a>
         )}
       </div>
-
-      {/* Map */}
-      <div ref={mapContainer} style={{ flex: 1 }} />
+      <div ref={containerRef} style={{ flex: 1 }} />
     </div>
   )
 }
