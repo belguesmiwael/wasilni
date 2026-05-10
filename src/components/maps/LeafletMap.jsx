@@ -35,9 +35,13 @@ export default function LeafletMap({ center, zoom = 7, onMapReady, style = {} })
       })
 
       // Dark OSM tiles
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap © CartoDB',
-        maxZoom: 19,
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri © OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map)
+      // Labels on top of satellite
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '', maxZoom: 19, pane: 'overlayPane'
       }).addTo(map)
 
       mapRef.current = map

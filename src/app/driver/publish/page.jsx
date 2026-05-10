@@ -45,10 +45,15 @@ export default function PublishTripPage() {
 
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser()
-    const { data } = await supabase.from('user_profiles').select('*, driver_kyc(status, vehicle_seats, gender)').eq('id', user.id).single()
-    setDriverProfile(data)
-    if (data?.driver_kyc?.vehicle_seats) {
-      setForm(f => ({ ...f, total_seats: Math.min(data.driver_kyc.vehicle_seats - 1, 4) }))
+    // Fetch profile
+    const { data: profile } = await supabase.from('user_profiles').select('*').eq('id', user.id).single()
+    // Fetch KYC separately
+    const { data: kyc } = await supabase.from('driver_kyc').select('*').eq('user_id', user.id).maybeSingle()
+    // Merge — is_driver_verified from profile, vehicle_seats from kyc
+    const merged = { ...profile, driver_kyc: kyc, gender: profile?.gender }
+    setDriverProfile(merged)
+    if (kyc?.vehicle_seats) {
+      setForm(f => ({ ...f, total_seats: Math.min(kyc.vehicle_seats - 1, 4) }))
     }
   }
 
@@ -125,8 +130,8 @@ export default function PublishTripPage() {
     setTimeout(() => router.push('/driver/trips'), 2000)
   }
 
-  const isVerified = driverProfile?.is_driver_verified
-  const isFemaleDriver = driverProfile?.gender === 'female'
+  const isVerified = driverProfile?.is_driver_verified || driverProfile?.driver_kyc?.status === 'approved'
+  const isFemaleDriver = driverProfile?.gender === 'female' || driverProfile?.driver_kyc?.gender === 'female'
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>

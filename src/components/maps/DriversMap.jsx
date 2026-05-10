@@ -67,9 +67,14 @@ export default function DriversMap({ onBook, userProfile }) {
     }
 
     const map = L.map(containerRef.current, { center: [33.8869, 9.5375], zoom: 7 })
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
-    }).addTo(map)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri © OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map)
+      // Labels on top of satellite
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '', maxZoom: 19, pane: 'overlayPane'
+      }).addTo(map)
 
     mapRef.current = map
   }

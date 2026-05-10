@@ -36,8 +36,13 @@ export default function LocationPicker({ label, value, onChange, color = '#00C9B
         zoom: picked ? 13 : 7,
       })
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri © OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map)
+      // Labels on top of satellite
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '', maxZoom: 19, pane: 'overlayPane'
       }).addTo(map)
 
       // Custom marker

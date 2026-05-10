@@ -5,10 +5,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Map, Car, Wallet, User, Shield, LayoutDashboard,
   Plus, List, Search, Menu, X, LogOut, Bell, ChevronRight,
-  AlertOctagon, UserCheck, BarChart2, Settings
+  AlertOctagon, UserCheck, BarChart2, Settings, Satellite
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import SOSButton from './SOSButton'
+import MapButton from './MapButton'
 
 const NAV_PASSENGER = [
   { icon: Map, label: 'Carte conducteurs', href: '/passenger/map' },
@@ -19,6 +20,7 @@ const NAV_PASSENGER = [
 
 const NAV_DRIVER = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/driver/dashboard' },
+  { icon: Map, label: '🛰️ Carte passagers', href: '/driver/map' },
   { icon: Plus, label: 'Publier un trajet', href: '/driver/publish' },
   { icon: List, label: 'Mes trajets', href: '/driver/trips' },
   { icon: Wallet, label: 'Portefeuille', href: '/driver/wallet' },
@@ -28,6 +30,7 @@ const NAV_DRIVER = [
 
 const NAV_ADMIN = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
+  { icon: Map, label: '🛰️ Carte temps réel', href: '/passenger/map' },
   { icon: AlertOctagon, label: 'Alertes SOS', href: '/admin/dashboard#sos' },
   { icon: UserCheck, label: 'Vérifications KYC', href: '/admin/dashboard#kyc' },
   { icon: BarChart2, label: 'Statistiques', href: '/admin/dashboard#stats' },
@@ -233,8 +236,10 @@ export default function AppShell({ children, user, profile }) {
         </main>
       </div>
 
-      {/* SOS Button — only during active trip */}
+      {/* SOS Button */}
       <SOSButton user={user} />
+      {/* Satellite Map Button */}
+      <MapButton role={role} />
 
       <style>{`
         @media (max-width: 768px) {
