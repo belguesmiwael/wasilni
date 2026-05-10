@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { ArrowRight, Users, Clock, CheckCircle, XCircle, Trash2, QrCode, Eye } from 'lucide-react'
+import { ArrowRight, Users, Clock, CheckCircle, XCircle, Trash2, QrCode, Eye, Navigation } from 'lucide-react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, Users, DollarSign, Heart, Calendar, CheckCircle, AlertCircle, Info } from 'lucide-react'
+import LocationPicker from '@/components/maps/LocationPicker'
 import { supabase } from '@/lib/supabase'
 
 const CITIES = ['Tunis','Sfax','Sousse','Monastir','Bizerte','Nabeul','Kairouan','Gabès','Gafsa','Médenine','Tataouine','Tozeur','Kebili','Sidi Bouzid','Kasserine','Siliana','Zaghouan','Béja','Jendouba','Le Kef','Mahdia','Manouba','Ben Arous','Ariana']
@@ -16,6 +17,9 @@ const PRICE_MAP = {
 
 export default function PublishTripPage() {
   const router = useRouter()
+  const [fromLocation, setFromLocation] = useState(null)
+  const [toLocation, setToLocation] = useState(null)
+
   const [form, setForm] = useState({
     from_city: '', to_city: '', from_hub: '', to_hub: '',
     departure_time: '', price_per_seat: '', total_seats: 3,
@@ -172,6 +176,22 @@ export default function PublishTripPage() {
                   {CITIES.filter(c => c !== form.from_city).map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Location pickers on map */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label className="label">Point de départ exact (optionnel)</label>
+              <LocationPicker label="le point de départ" value={fromLocation}
+                onChange={loc => { setFromLocation(loc); setForm(f => ({ ...f, from_lat: loc?.lat, from_lng: loc?.lng })) }}
+                color="#00C9B1" />
+            </div>
+            <div>
+              <label className="label">Point d'arrivée exact (optionnel)</label>
+              <LocationPicker label="le point d'arrivée" value={toLocation}
+                onChange={loc => { setToLocation(loc); setForm(f => ({ ...f, to_lat: loc?.lat, to_lng: loc?.lng })) }}
+                color="#EF4444" />
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { ArrowRight, Clock, MapPin, Star, CheckCircle, XCircle, QrCode, AlertCircle } from 'lucide-react'
+import { ArrowRight, Clock, MapPin, Star, CheckCircle, XCircle, QrCode, AlertCircle, Navigation } from 'lucide-react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { QRCodeSVG } from 'qrcode.react'
 
@@ -118,6 +119,11 @@ export default function PassengerTripsPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {['confirmed','checked_in'].includes(b.status) && (
+                    <Link href={`/trip/${b.trip_id}`} className="btn btn-outline btn-sm" style={{ textDecoration: 'none', gap: 6, display: 'inline-flex', alignItems: 'center' }}>
+                      <Navigation size={13} />Suivre en direct
+                    </Link>
+                  )}
                   {b.status === 'confirmed' && (
                     <button className="btn btn-outline btn-sm" onClick={() => setShowQR(b)} style={{ gap: 6 }}>
                       <QrCode size={14} />Mon QR code

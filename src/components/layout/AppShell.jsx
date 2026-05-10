@@ -4,14 +4,15 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Map, Car, Wallet, User, Shield, LayoutDashboard,
-  Plus, List, Menu, X, LogOut, Bell, ChevronRight,
+  Plus, List, Search, Menu, X, LogOut, Bell, ChevronRight,
   AlertOctagon, UserCheck, BarChart2, Settings
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import SOSButton from './SOSButton'
 
 const NAV_PASSENGER = [
-  { icon: Map, label: 'Rechercher', href: '/passenger/search' },
+  { icon: Map, label: 'Carte conducteurs', href: '/passenger/map' },
+  { icon: Search, label: 'Rechercher', href: '/passenger/search' },
   { icon: List, label: 'Mes trajets', href: '/passenger/trips' },
   { icon: User, label: 'Mon profil', href: '/passenger/profile' },
 ]
