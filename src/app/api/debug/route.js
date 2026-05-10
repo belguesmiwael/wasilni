@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+function cleanUrl(raw) {
+  try {
+    return new URL(raw.trim()).origin
+  } catch {
+    return raw.trim()
+  }
+}
+
 export async function GET() {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+  const rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '')
+  const cleanedUrl = cleanUrl(rawUrl)
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim()
 
   let connectionTest = null
   let error = null
 
   try {
-    const supabase = createClient(url, anon)
+    const supabase = createClient(cleanedUrl, anon)
     const { data, error: err } = await supabase.from('hubs').select('id').limit(1)
     connectionTest = err ? `FAIL: ${err.message}` : `OK — ${data?.length} row(s)`
     error = err?.message || null
@@ -19,10 +28,9 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    url_preview: url.substring(0, 40) + '...',
-    url_length: url.length,
-    anon_length: anon.length,
-    anon_starts_with: anon.substring(0, 10),
+    raw_url_length: rawUrl.length,
+    cleaned_url: cleanedUrl,
+    cleaned_length: cleanedUrl.length,
     connection_test: connectionTest,
     error,
   })

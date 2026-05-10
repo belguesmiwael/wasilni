@@ -1,7 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+function cleanUrl(raw) {
+  try { return new URL((raw || '').trim()).origin }
+  catch { return (raw || '').trim() }
+}
+
+const SUPABASE_URL = cleanUrl(process.env.NEXT_PUBLIC_SUPABASE_URL)
 const SUPABASE_ANON = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim()
 
 export async function createClient() {
@@ -26,10 +31,7 @@ export async function getUser() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
     const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+      .from('user_profiles').select('*').eq('id', user.id).single()
     return { ...user, profile }
   } catch (e) {
     console.error('getUser error:', e.message)
