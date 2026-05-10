@@ -1,7 +1,32 @@
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Car, Users, Shield, Star, MapPin, Phone, ArrowRight, CheckCircle, Heart, Zap, Lock } from 'lucide-react'
+import { Car, Users, Shield, Star, MapPin, Phone, ArrowRight, CheckCircle, Heart, Lock } from 'lucide-react'
 
 export default function LandingPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Detect Supabase auth hash tokens and redirect appropriately
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.replace('#', ''))
+      const type = params.get('type')
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+
+      if (type === 'recovery') {
+        router.replace('/auth/reset-password' + window.location.hash)
+        return
+      }
+      if (type === 'invite' || type === 'signup' || type === 'magiclink') {
+        router.replace('/auth/callback?access_token=' + accessToken + '&refresh_token=' + refreshToken + '&type=' + type)
+        return
+      }
+    }
+  }, [])
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font)' }}>
 
@@ -29,7 +54,7 @@ export default function LandingPage() {
         <div style={{ position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)', width: 700, height: 400, background: 'radial-gradient(ellipse, rgba(0,201,177,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div className="grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.3 }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', borderRadius: 100, padding: '6px 16px', fontSize: 12, fontWeight: 700, color: 'var(--teal)', marginBottom: 24, letterSpacing: '0.5px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', borderRadius: 100, padding: '6px 16px', fontSize: 12, fontWeight: 700, color: 'var(--teal)', marginBottom: 24 }}>
             <Shield size={12} />KYC VÉRIFIÉ · ESCROW · SOS 24/7
           </div>
           <h1 style={{ fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-2px', marginBottom: 24, maxWidth: 800, margin: '0 auto 24px' }}>
@@ -38,7 +63,7 @@ export default function LandingPage() {
             gouvernorats tunisiens
           </h1>
           <p style={{ fontSize: 18, color: 'var(--muted)', maxWidth: 520, margin: '0 auto 40px', lineHeight: 1.7 }}>
-            Conducteurs vérifiés, paiement escrow, bouton SOS avec rappel humain en 2 minutes. Voyagez enfin l'esprit tranquille.
+            Conducteurs vérifiés, paiement escrow, bouton SOS avec rappel humain en 2 minutes.
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--teal)', color: '#0A0F1C', textDecoration: 'none', padding: '16px 32px', borderRadius: 14, fontWeight: 800, fontSize: 16 }}>
@@ -48,8 +73,6 @@ export default function LandingPage() {
               <Car size={18} />Je suis conducteur
             </Link>
           </div>
-
-          {/* Stats */}
           <div style={{ display: 'flex', gap: 40, justifyContent: 'center', marginTop: 56, flexWrap: 'wrap' }}>
             {[
               { num: '500+', label: 'Conducteurs vérifiés' },
@@ -72,28 +95,19 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-1px', marginBottom: 12 }}>Deux espaces. Une plateforme.</h2>
           <p style={{ color: 'var(--muted)', fontSize: 16 }}>Choisissez votre rôle et accédez à votre espace dédié.</p>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-
-          {/* ESPACE VOYAGEUR */}
+          {/* VOYAGEUR */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: 40, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: 0, right: 0, width: 200, height: 200, background: 'radial-gradient(circle, rgba(0,201,177,0.08) 0%, transparent 70%)' }} />
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
               <Users size={26} color="var(--teal)" />
             </div>
-            <h3 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8, letterSpacing: '-0.5px' }}>Espace Voyageur</h3>
+            <h3 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>Espace Voyageur</h3>
             <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
-              Trouvez un trajet vérifié, réservez en 30 secondes, payez en sécurité et voyagez avec confiance.
+              Trouvez un trajet vérifié, réservez en 30 secondes, payez en sécurité.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-              {[
-                'Recherche par ville + filtres avancés',
-                'Conducteurs avec badge KYC vérifié',
-                'Paiement escrow — remboursé si annulation',
-                'QR code d\'embarquement sécurisé',
-                'Bouton SOS avec rappel humain 2 min',
-                'Option trajets féminins uniquement',
-              ].map((f, i) => (
+              {['Conducteurs avec badge KYC vérifié','Paiement escrow — remboursé si annulation','QR code d\'embarquement sécurisé','Bouton SOS avec rappel humain 2 min','Option trajets féminins uniquement'].map((f, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <CheckCircle size={15} color="var(--teal)" style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 14, color: 'var(--muted)' }}>{f}</span>
@@ -103,32 +117,20 @@ export default function LandingPage() {
             <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--teal)', color: '#0A0F1C', textDecoration: 'none', padding: '14px 24px', borderRadius: 12, fontWeight: 800, fontSize: 15 }}>
               Créer mon compte voyageur <ArrowRight size={16} />
             </Link>
-            <div style={{ marginTop: 12, textAlign: 'center' }}>
-              <Link href="/auth/login" style={{ fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }}>
-                Déjà un compte ? <span style={{ color: 'var(--teal)' }}>Se connecter</span>
-              </Link>
-            </div>
           </div>
 
-          {/* ESPACE CONDUCTEUR */}
+          {/* CONDUCTEUR */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: 40, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: 0, right: 0, width: 200, height: 200, background: 'radial-gradient(circle, rgba(212,168,83,0.08) 0%, transparent 70%)' }} />
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--gold-dim)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
               <Car size={26} color="var(--gold)" />
             </div>
-            <h3 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8, letterSpacing: '-0.5px' }}>Espace Conducteur</h3>
+            <h3 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>Espace Conducteur</h3>
             <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
-              Rentabilisez vos trajets existants. Publiez en 2 minutes, encaissez directement sur votre portefeuille.
+              Rentabilisez vos trajets existants. Publiez en 2 minutes, encaissez directement.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
-              {[
-                'Vérification KYC rapide (2h ouvrables)',
-                'Publication trajet en 2 minutes',
-                'Trajets récurrents automatiques (hebdo)',
-                'Portefeuille intégré — retrait Flouci / D17',
-                'Option trajet féminin (conductrices)',
-                'Tableau de bord revenus en temps réel',
-              ].map((f, i) => (
+              {['Vérification KYC rapide (2h ouvrables)','Publication trajet en 2 minutes','Trajets récurrents automatiques','Portefeuille intégré — retrait Flouci / D17','Tableau de bord revenus en temps réel'].map((f, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <CheckCircle size={15} color="var(--gold)" style={{ flexShrink: 0, marginTop: 1 }} />
                   <span style={{ fontSize: 14, color: 'var(--muted)' }}>{f}</span>
@@ -138,12 +140,9 @@ export default function LandingPage() {
             <Link href="/auth/register" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--gold)', color: '#0A0F1C', textDecoration: 'none', padding: '14px 24px', borderRadius: 12, fontWeight: 800, fontSize: 15 }}>
               Devenir conducteur <ArrowRight size={16} />
             </Link>
-
-            {/* Earning calc */}
-            <div style={{ marginTop: 20, background: 'var(--surface-2)', borderRadius: 12, padding: '14px 16px' }}>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>💰 Exemple : Tunis → Sfax (30 DT) × 3 passagers</div>
+            <div style={{ marginTop: 16, background: 'var(--surface-2)', borderRadius: 12, padding: '12px 16px' }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>💰 Tunis → Sfax (30 DT) × 3 passagers</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--gold)' }}>= 81 DT nets par trajet</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Après commission Waselni 10%</div>
             </div>
           </div>
         </div>
@@ -151,42 +150,34 @@ export default function LandingPage() {
 
       {/* SÉCURITÉ */}
       <section style={{ padding: '80px 40px', background: 'var(--surface)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <h2 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-1px', marginBottom: 12 }}>Sécurité au cœur de tout</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 15 }}>Chaque fonctionnalité est conçue pour protéger conducteurs et voyageurs.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-            {[
-              { icon: Shield, color: 'var(--teal)', title: 'KYC Conducteur', desc: 'CIN, permis, carte grise, selfie — chaque conducteur est vérifié manuellement par notre équipe avant d\'apparaître sur la plateforme.' },
-              { icon: Lock, color: 'var(--gold)', title: 'Paiement Escrow', desc: 'Votre argent est sécurisé jusqu\'à confirmation d\'arrivée. Le conducteur ne reçoit rien avant la fin du trajet.' },
-              { icon: Phone, color: 'var(--red)', title: 'SOS — Rappel 2 min', desc: '1 appui prolongé sur le bouton SOS déclenche une alerte et notre équipe vous rappelle dans les 2 minutes, 24h/24.' },
-              { icon: Heart, color: 'var(--gold)', title: 'Règle féminine', desc: 'Une femme ne peut jamais voyager seule avec un conducteur masculin. Le système bloque automatiquement la réservation.' },
-              { icon: MapPin, color: 'var(--teal)', title: 'Hubs certifiés', desc: '13 points de rendez-vous officiels dans les principales villes — des lieux sûrs, éclairés et fréquentés.' },
-              { icon: Star, color: 'var(--gold)', title: 'Notation mutuelle', desc: 'Chaque trajet est noté par les deux parties. Les mauvais acteurs sont détectés et exclus de la plateforme.' },
-            ].map((f, i) => (
-              <div key={i} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: `${f.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <f.icon size={20} color={f.color} />
-                </div>
-                <h4 style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{f.title}</h4>
-                <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>{f.desc}</p>
+        <div style={{ maxWidth: 1100, margin: '0 auto', textAlign: 'center', marginBottom: 48 }}>
+          <h2 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-1px', marginBottom: 12 }}>Sécurité au cœur de tout</h2>
+        </div>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+          {[
+            { icon: Shield, color: 'var(--teal)', title: 'KYC Conducteur', desc: 'Chaque conducteur est vérifié manuellement : CIN, permis, carte grise, selfie.' },
+            { icon: Lock, color: 'var(--gold)', title: 'Paiement Escrow', desc: 'Votre argent est sécurisé jusqu\'à confirmation d\'arrivée à destination.' },
+            { icon: Phone, color: 'var(--red)', title: 'SOS — Rappel 2 min', desc: 'Appui prolongé → alerte immédiate → rappel humain dans les 2 minutes.' },
+            { icon: Heart, color: 'var(--gold)', title: 'Règle féminine', desc: 'Blocage automatique si une femme voyagerait seule avec un conducteur masculin.' },
+            { icon: MapPin, color: 'var(--teal)', title: 'Hubs certifiés', desc: '13 points de rendez-vous officiels dans les principales villes tunisiennes.' },
+            { icon: Star, color: 'var(--gold)', title: 'Notation mutuelle', desc: 'Chaque trajet noté des deux côtés. Les mauvais acteurs sont exclus.' },
+          ].map((f, i) => (
+            <div key={i} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${f.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <f.icon size={20} color={f.color} />
               </div>
-            ))}
-          </div>
+              <h4 style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{f.title}</h4>
+              <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7 }}>{f.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* CTA */}
       <section style={{ padding: '80px 40px', textAlign: 'center' }}>
         <div style={{ maxWidth: 560, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-1px', marginBottom: 16 }}>
-            Prêt à voyager autrement ?
-          </h2>
-          <p style={{ color: 'var(--muted)', fontSize: 16, marginBottom: 36, lineHeight: 1.7 }}>
-            Rejoignez la première communauté de covoiturage sécurisé de Tunisie.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-1px', marginBottom: 16 }}>Prêt à voyager autrement ?</h2>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 32 }}>
             <Link href="/auth/register" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--teal)', color: '#0A0F1C', textDecoration: 'none', padding: '16px 32px', borderRadius: 14, fontWeight: 800, fontSize: 16 }}>
               Créer un compte gratuit <ArrowRight size={16} />
             </Link>
@@ -206,11 +197,6 @@ export default function LandingPage() {
           <span style={{ fontWeight: 700, fontSize: 14 }}>Waselni · وصلّني</span>
         </div>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>© 2025 Waselni. Covoiturage sécurisé en Tunisie.</span>
-        <div style={{ display: 'flex', gap: 20 }}>
-          <span style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Conditions</span>
-          <span style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Confidentialité</span>
-          <span style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer' }}>Contact</span>
-        </div>
       </footer>
     </div>
   )
