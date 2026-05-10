@@ -1,26 +1,29 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim()
+
+  let connectionTest = null
+  let error = null
+
+  try {
+    const supabase = createClient(url, anon)
+    const { data, error: err } = await supabase.from('hubs').select('id').limit(1)
+    connectionTest = err ? `FAIL: ${err.message}` : `OK — ${data?.length} row(s)`
+    error = err?.message || null
+  } catch (e) {
+    connectionTest = `EXCEPTION: ${e.message}`
+    error = e.message
+  }
 
   return NextResponse.json({
-    NEXT_PUBLIC_SUPABASE_URL: {
-      set: !!url,
-      value: url ? url.substring(0, 30) + '...' : 'MISSING',
-      startsWithHttps: url?.startsWith('https://') ?? false,
-      endsWithSupabase: url?.includes('.supabase.co') ?? false,
-    },
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: {
-      set: !!anon,
-      length: anon?.length ?? 0,
-      preview: anon ? anon.substring(0, 20) + '...' : 'MISSING',
-    },
-    SUPABASE_SERVICE_ROLE_KEY: {
-      set: !!service,
-      length: service?.length ?? 0,
-      preview: service ? service.substring(0, 20) + '...' : 'MISSING',
-    },
+    url_preview: url.substring(0, 40) + '...',
+    url_length: url.length,
+    anon_length: anon.length,
+    anon_starts_with: anon.substring(0, 10),
+    connection_test: connectionTest,
+    error,
   })
 }
