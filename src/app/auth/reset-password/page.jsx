@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Car } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Car, Loader } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function ResetPasswordPage() {
@@ -10,24 +10,43 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState('')
   const [showPwd, setShowPwd] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [preparing, setPreparing] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const [sessionReady, setSessionReady] = useState(false)
 
   useEffect(() => {
-    // Supabase envoie le token dans le hash — on écoute l'événement PASSWORD_RECOVERY
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        setSessionReady(true)
+    async function establishSession() {
+      try {
+        // Extract tokens from URL hash
+        const hash = window.location.hash.replace('#', '')
+        const params = new URLSearchParams(hash)
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+
+        if (accessToken && refreshToken) {
+          // Manually set the session from the hash tokens
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (sessionError) {
+            setError('Lien expiré ou invalide. Demandez un nouveau lien.')
+          }
+        } else {
+          // Check if already logged in (session in cookies)
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) {
+            setError('Lien invalide. Demandez un nouveau lien de réinitialisation.')
+          }
+        }
+      } catch (e) {
+        setError('Erreur inattendue. Réessayez.')
+      } finally {
+        setPreparing(false)
       }
-    })
+    }
 
-    // Si l'utilisateur arrive directement sur cette page avec une session active
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true)
-    })
-
-    return () => subscription.unsubscribe()
+    establishSession()
   }, [])
 
   async function handleReset(e) {
@@ -36,8 +55,13 @@ export default function ResetPasswordPage() {
     if (password.length < 8) { setError('Minimum 8 caractères'); return }
     if (password !== confirm) { setError('Les mots de passe ne correspondent pas'); return }
     setLoading(true)
+
     const { error: err } = await supabase.auth.updateUser({ password })
-    if (err) { setError(err.message); setLoading(false); return }
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+      return
+    }
     setSuccess(true)
     setTimeout(() => router.push('/'), 2500)
   }
@@ -59,15 +83,44 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="card" style={{ padding: 32 }}>
-          {success ? (
+          {/* Loading state */}
+          {preparing && (
+            <div style={{ textAlign: 'center', padding: '32px 0' }}>
+              <div style={{ width: 40, height: 40, border: '3px solid var(--teal)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Vérification du lien...</p>
+            </div>
+          )}
+
+          {/* Success */}
+          {!preparing && success && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--teal-dim)', border: '2px solid var(--teal)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                 <CheckCircle size={30} color="var(--teal)" />
               </div>
               <h3 style={{ fontWeight: 700, marginBottom: 8 }}>Mot de passe défini !</h3>
-              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Redirection vers l'accueil...</p>
+              <p style={{ color: 'var(--muted)', fontSize: 14 }}>Connexion automatique en cours...</p>
             </div>
-          ) : (
+          )}
+
+          {/* Error only (no form) */}
+          {!preparing && !success && error && (
+            <div>
+              <div style={{ display: 'flex', gap: 10, background: 'var(--red-dim)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, alignItems: 'flex-start' }}>
+                <AlertCircle size={16} color="var(--red)" style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--red)', fontSize: 13, marginBottom: 4 }}>Lien invalide ou expiré</div>
+                  <div style={{ color: 'var(--muted)', fontSize: 12 }}>{error}</div>
+                </div>
+              </div>
+              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
+                onClick={() => router.push('/auth/login')}>
+                Retour à la connexion
+              </button>
+            </div>
+          )}
+
+          {/* Form */}
+          {!preparing && !success && !error && (
             <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               <div>
                 <label className="label">Nouveau mot de passe</label>
